@@ -77,19 +77,38 @@ resource "azurerm_storage_account" "testStorage" {
   account_replication_type = "LRS"
 }
 
-resource "azurerm_network_interface" "testnic" {
-  name                = "testnic"
+resource "azurerm_network_interface" "testnic1" {
+  name                = "testnic1"
   location            = azurerm_resource_group.testVnet.location
   resource_group_name = azurerm_resource_group.testVnet.name
 
   ip_configuration {
-    name                          = "test_nic_configuration"
+    name                          = "test_nic_configuration1"
     subnet_id                     = azurerm_subnet.Sub1.id
     private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.vm1publicip.id
   }
 }
 
-  resource "tls_private_key" "testpk" {
+resource "azurerm_network_interface" "testnic2" {
+  name                = "testnic2"
+  location            = azurerm_resource_group.testVnet.location
+  resource_group_name = azurerm_resource_group.testVnet.name
+
+  ip_configuration {
+    name                          = "test_nic_configuration2"
+    subnet_id                     = azurerm_subnet.Sub1.id
+    private_ip_address_allocation = "Dynamic"
+    public_ip_address_id          = azurerm_public_ip.vm2publicip.id
+  }
+}
+
+resource "tls_private_key" "testpk1" {
+  algorithm = "RSA"
+  rsa_bits  = 4096
+}
+
+resource "tls_private_key" "testpk2" {
   algorithm = "RSA"
   rsa_bits  = 4096
 }
@@ -99,7 +118,7 @@ resource "azurerm_linux_virtual_machine" "vm1" {
   name                  = "vm1"
   location              = azurerm_resource_group.testVnet.location
   resource_group_name   = azurerm_resource_group.testVnet.name
-  network_interface_ids = [azurerm_network_interface.testnic.id]
+  network_interface_ids = [azurerm_network_interface.testnic1.id]
   size                  = "Standard_DS1_v2"
 
   os_disk {
@@ -111,7 +130,7 @@ resource "azurerm_linux_virtual_machine" "vm1" {
   source_image_reference {
     publisher = "RedHat"
     offer     = "RHEL"
-    sku       = "9_0"
+    sku       = "9.0"
     version   = "9.0.2022081813"
   }
 
@@ -121,7 +140,7 @@ resource "azurerm_linux_virtual_machine" "vm1" {
 
   admin_ssh_key {
     username   = "vm1ssh"
-    public_key = tls_private_key.testpk.public_key_openssh
+    public_key = tls_private_key.testpk1.public_key_openssh
   }
 
   boot_diagnostics {
@@ -130,8 +149,50 @@ resource "azurerm_linux_virtual_machine" "vm1" {
 
 }
 
-resource "azurerm_public_ip" "vmpublicip" {
-  name                = "vmPublicIP"
+resource "azurerm_linux_virtual_machine" "vm2" {
+  name                  = "vm2"
+  location              = azurerm_resource_group.testVnet.location
+  resource_group_name   = azurerm_resource_group.testVnet.name
+  network_interface_ids = [azurerm_network_interface.testnic2.id]
+  size                  = "Standard_DS1_v2"
+
+  os_disk {
+    name                 = "osDisk"
+    caching              = "ReadWrite"
+    storage_account_type = "Premium_LRS"
+  }
+
+  source_image_reference {
+    publisher = "RedHat"
+    offer     = "RHEL"
+    sku       = "9.0"
+    version   = "9.0.2022081813"
+  }
+
+  computer_name                   = "vm2"
+  admin_username                  = "vm2admin"
+  disable_password_authentication = true
+
+  admin_ssh_key {
+    username   = "vm2ssh"
+    public_key = tls_private_key.testpk2.public_key_openssh
+  }
+
+  boot_diagnostics {
+    storage_account_uri = azurerm_storage_account.testStorage.primary_blob_endpoint
+  }
+
+}
+
+resource "azurerm_public_ip" "vm1publicip" {
+  name                = "vm1PublicIP"
+  location            = azurerm_resource_group.testVnet.location
+  resource_group_name = azurerm_resource_group.testVnet.name
+  allocation_method   = "Dynamic"
+}
+
+resource "azurerm_public_ip" "vm2publicip" {
+  name                = "vm2PublicIP"
   location            = azurerm_resource_group.testVnet.location
   resource_group_name = azurerm_resource_group.testVnet.name
   allocation_method   = "Dynamic"

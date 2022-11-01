@@ -7,6 +7,6 @@ output "public_ip_address" {
 }
 
 output "tls_private_key" {
-  value     = tls_private_key.testpk.private_key_pem
+  value     = tls_private_key.testpk1.private_key_pem
   sensitive = true
 }
